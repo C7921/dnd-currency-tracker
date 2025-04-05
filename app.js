@@ -56,27 +56,44 @@ app.use((req, res, next) => {
 });
 
 // MongoDB connection string - prioritizing environment variable
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/dnd-currency';
+const MONGODB_URI = process.env.MONGODB_URI // || 'mongodb://localhost:27017/dnd-currency';
 
-// Connect to MongoDB with improved error handling
-mongoose.connect(MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-  serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
-  retryWrites: true
-})
-.then(() => {
-  console.log('MongoDB connected successfully');
-  console.log('Connection string:', MONGODB_URI.includes('@') ? 
-    MONGODB_URI.replace(/(mongodb(\+srv)?:\/\/[^:]+:)[^@]+(@.+)/, '$1*****$3') : 
-    MONGODB_URI);
-})
-.catch(err => {
-  console.error('MongoDB connection error:', err);
-  if (process.env.NODE_ENV === 'production') {
-    console.error('Warning: Could not connect to MongoDB.');
+
+if (!MONGODB_URI) {
+  console.error('MONGODB_URI environment variable is not set. Using local fallback.');
+  // Only use localhost as a fallback in development
+  if (process.env.NODE_ENV !== 'production') {
+    mongoose.connect('mongodb://localhost:27017/dnd-currency', {
+      useNewUrlParser: true,
+      useUnifiedTopology: true
+    })
+    .then(() => console.log('Connected to local MongoDB'))
+    .catch(err => console.error('Failed to connect to local MongoDB:', err));
+  } else {
+    console.error('No MongoDB connection string provided in production! Application will not function correctly.');
   }
-});
+} else {
+  console.log('Connecting to MongoDB using provided URI...');
+  // Connect using the environment variable
+  mongoose.connect(MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+    serverSelectionTimeoutMS: 5000
+  })
+  .then(() => {
+    console.log('Successfully connected to MongoDB');
+    // Mask the password in logs for security
+    const maskedUri = MONGODB_URI.replace(
+      /(mongodb(\+srv)?:\/\/[^:]+:)([^@]+)(@.+)/,
+      '$1*****$4'
+    );
+    console.log(`Connection string: ${maskedUri}`);
+  })
+  .catch(err => {
+    console.error('MongoDB connection error:', err);
+    console.error('Please check your MongoDB URI and network settings.');
+  });
+}
 
 app.use('*', (req, res) => {
   console.log(`Received request at unexpected route: ${req.originalUrl}`);
