@@ -1,41 +1,39 @@
 const express = require('express');
 const router = express.Router();
 const Character = require('../models/character');
-
-// Get all characters
-router.get('/', async (req, res) => {
-  try {
-    const characters = await Character.find().sort({ createdAt: -1 });
-    res.json(characters);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
-// Get a single character
-router.get('/:id', async (req, res) => {
-  try {
-    const character = await Character.findById(req.params.id);
-    if (!character) {
-      return res.status(404).json({ message: 'Character not found' });
-    }
-    res.json(character);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
-// Create a new character
+// Update the character creation route in routes/characters.js
 router.post('/', async (req, res) => {
-  const character = new Character({
-    name: req.body.name,
-    currency: req.body.currency || {}
-  });
-
   try {
+    // Debug the incoming request
+    console.log('Received character creation request');
+    console.log('Request body:', req.body);
+    
+    // Check if req.body exists
+    if (!req.body) {
+      return res.status(400).json({ message: 'Request body is missing' });
+    }
+    
+    // Check if name is provided
+    if (!req.body.name) {
+      return res.status(400).json({ message: 'Character name is required' });
+    }
+    
+    // Create the character with validation
+    const character = new Character({
+      name: req.body.name,
+      currency: {
+        platinum: req.body.currency?.platinum || 0,
+        gold: req.body.currency?.gold || 0,
+        electrum: req.body.currency?.electrum || 0,
+        silver: req.body.currency?.silver || 0,
+        copper: req.body.currency?.copper || 0
+      }
+    });
+
     const newCharacter = await character.save();
     res.status(201).json(newCharacter);
   } catch (err) {
+    console.error('Error creating character:', err);
     res.status(400).json({ message: err.message });
   }
 });

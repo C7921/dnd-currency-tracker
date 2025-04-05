@@ -22,12 +22,20 @@ document.addEventListener('DOMContentLoaded', () => {
   const addCharacter = async (e) => {
     e.preventDefault();
     
+    console.log('Form submitted, preparing to add character');
+    
     const nameInput = document.getElementById('name');
     const platinumInput = document.getElementById('platinum');
     const goldInput = document.getElementById('gold');
     const electrumInput = document.getElementById('electrum');
     const silverInput = document.getElementById('silver');
     const copperInput = document.getElementById('copper');
+    
+    // Check if name is provided
+    if (!nameInput.value.trim()) {
+      alert('Please enter a character name');
+      return;
+    }
     
     const character = {
       name: nameInput.value,
@@ -40,6 +48,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     };
     
+    console.log('Sending character data:', character);
+    
     try {
       const response = await fetch('/api/characters', {
         method: 'POST',
@@ -49,15 +59,23 @@ document.addEventListener('DOMContentLoaded', () => {
         body: JSON.stringify(character)
       });
       
+      console.log('Response status:', response.status);
+      
       if (response.ok) {
+        console.log('Character added successfully');
         // Reset form
         characterForm.reset();
         
         // Refresh character list
         displayCharacters();
+      } else {
+        const errorData = await response.json();
+        console.error('Error from server:', errorData);
+        alert(`Failed to add character: ${errorData.message}`);
       }
     } catch (error) {
       console.error('Error adding character:', error);
+      alert('Failed to add character. Check console for details.');
     }
   };
   

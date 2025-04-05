@@ -44,6 +44,7 @@ app.get('/health', (req, res) => {
 
 // Middleware
 app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true })); // Add this line for form submissions
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Basic security headers without helmet
