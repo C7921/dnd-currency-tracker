@@ -1,0 +1,25 @@
+{
+  "name": "dnd-currency-tracker",
+  "version": "1.0.0",
+  "description": "A simple D&D 5e currency tracker",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js"
+  },
+  "keywords": [
+    "dnd",
+    "currency",
+    "tracker"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "body-parser": "^1.20.3",
+    "express": "^4.21.2",
+    "mongoose": "^6.13.8"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}
