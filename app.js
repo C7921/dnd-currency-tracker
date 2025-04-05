@@ -3,87 +3,112 @@ const mongoose = require('mongoose');
 const path = require('path');
 const characterRoutes = require('./routes/characters');
 
-const app = express();
+// Environment configuration
+const ENV = process.env.NODE_ENV || 'development';
 const PORT = process.env.PORT || 8080;
 
+// Database connection config - Docker-aware configuration
+const MONGODB_URI = process.env.MONGODB_URI || 
+  (ENV === 'production' 
+    ? 'mongodb://localhost:27017/dnd-currency' 
+    : 'mongodb://mongodb:27017/dnd-currency-dev'); // Use 'mongodb' as hostname in Docker
+
+// Initialize Express app
+const app = express();
+
 // Body parser middleware - ENSURE THESE COME BEFORE ROUTES
-// Remove bodyParser package dependency - simplify to just Express built-in parsers
 app.use(express.json({ limit: '10mb' })); 
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Test endpoint to verify body parsing works
-app.post('/api/test', (req, res) => {
-  console.log('Test endpoint hit');
-  console.log('Received body:', req.body);
-  res.json({
-    message: 'Test successful',
-    receivedBody: req.body,
-    bodyEmpty: !req.body || Object.keys(req.body).length === 0
-  });
-});
 
 // Static files middleware
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Debug middleware to log all requests
+// Logging middleware - more verbose in development
 app.use((req, res, next) => {
-  console.log(`${req.method} ${req.url}`);
+  console.log(`[${ENV}] ${req.method} ${req.url}`);
   
-  if (req.method === 'POST') {
+  if (ENV === 'development' && req.method === 'POST') {
     console.log('Request headers:', {
       'content-type': req.headers['content-type'],
       'content-length': req.headers['content-length']
     });
-    console.log('Request body (parsed):', req.body);
+    console.log('Request body:', req.body);
   }
   next();
 });
 
-// Health check endpoint for DigitalOcean
+// Health check endpoint (useful for container health checks and DigitalOcean)
 app.get('/health', (req, res) => {
   res.status(200).send('OK');
 });
 
-// MongoDB connection string - prioritizing environment variable
-const MONGODB_URI = process.env.MONGODB_URI;
-
-if (!MONGODB_URI) {
-  console.error('MONGODB_URI environment variable is not set!');
-  if (process.env.NODE_ENV !== 'production') {
-    // Only use localhost as a fallback in development
-    mongoose.connect('mongodb://localhost:27017/dnd-currency', {
-      useNewUrlParser: true,
-      useUnifiedTopology: true
-    })
-    .then(() => console.log('Connected to local MongoDB'))
-    .catch(err => console.error('Failed to connect to local MongoDB:', err));
-  } else {
-    console.error('No MongoDB connection string provided in production! Application will not function correctly.');
-  }
-} else {
-  console.log('Connecting to MongoDB using provided URI...');
-  // Connect using the environment variable
-  mongoose.connect(MONGODB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-    serverSelectionTimeoutMS: 5000
-  })
-  .then(() => {
-    console.log('Successfully connected to MongoDB');
-    // Mask the password in logs for security
-    const maskedUri = MONGODB_URI.replace(
-      /(mongodb(\+srv)?:\/\/[^:]+:)([^@]+)(@.+)/,
-      '$1*****$4'
-    );
-    console.log(`Connection string: ${maskedUri}`);
-  })
-  .catch(err => {
-    console.error('MongoDB connection error:', err);
-    console.error('Please check your MongoDB URI and network settings.');
+// Database connection test endpoint (development only)
+if (ENV === 'development') {
+  app.get('/api/db-test', async (req, res) => {
+    try {
+      const dbState = mongoose.connection.readyState;
+      const stateMap = {
+        0: 'disconnected',
+        1: 'connected',
+        2: 'connecting',
+        3: 'disconnecting'
+      };
+      
+      res.json({
+        connected: dbState === 1,
+        state: stateMap[dbState],
+        database: mongoose.connection.db?.databaseName || 'not connected',
+        host: mongoose.connection.host
+      });
+    } catch (error) {
+      res.status(500).json({
+        connected: false,
+        error: error.message
+      });
+    }
+  });
+  
+  // Test endpoint to verify body parsing works
+  app.post('/api/test', (req, res) => {
+    console.log('Test endpoint hit');
+    console.log('Received body:', req.body);
+    res.json({
+      message: 'Test successful',
+      receivedBody: req.body,
+      bodyEmpty: !req.body || Object.keys(req.body).length === 0
+    });
   });
 }
 
-// API Routes - IMPORTANT: Place after body parser middleware
+// Connect to MongoDB with environment-specific settings
+console.log(`Running in ${ENV} mode`);
+console.log(`Connecting to database: ${MONGODB_URI}`);
+
+mongoose.connect(MONGODB_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  // Increase timeouts to prevent connection issues
+  serverSelectionTimeoutMS: ENV === 'production' ? 5000 : 30000,
+  socketTimeoutMS: ENV === 'production' ? 45000 : 60000,
+  connectTimeoutMS: ENV === 'production' ? 10000 : 30000
+})
+.then(() => {
+  console.log('Successfully connected to MongoDB');
+  // Log the database name for confirmation
+  console.log(`Database: ${mongoose.connection.db.databaseName}`);
+})
+.catch(err => {
+  console.error('MongoDB connection error:', err);
+  console.error('Please check your MongoDB URI and network settings.');
+  
+  if (ENV === 'development') {
+    console.error('Ensure your MongoDB container is running:');
+    console.error('  docker ps | grep mongodb');
+    console.error('If not running: docker-compose up -d');
+  }
+});
+
+// API Routes
 app.use('/api/characters', characterRoutes);
 
 // Serve the main page
@@ -97,7 +122,8 @@ app.use('*', (req, res) => {
   res.status(200).send({
     message: `Received request at ${req.originalUrl}`,
     method: req.method,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    environment: ENV
   });
 });
 
@@ -106,11 +132,12 @@ app.use((err, req, res, next) => {
   console.error('Global error handler:', err.stack);
   res.status(500).json({
     message: 'Something went wrong!',
-    error: process.env.NODE_ENV === 'production' ? {} : err
+    error: ENV === 'production' ? {} : err
   });
 });
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
+  console.log(`Server running on port ${PORT} in ${ENV} mode`);
+  console.log(`http://localhost:${PORT}`);
 });
