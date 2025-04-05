@@ -8,10 +8,7 @@ const ENV = process.env.NODE_ENV || 'development';
 const PORT = process.env.PORT || 8080;
 
 // Database connection config - Docker-aware configuration
-const MONGODB_URI = process.env.MONGODB_URI || 
-  (ENV === 'production' 
-    ? 'mongodb://localhost:27017/dnd-currency' 
-    : 'mongodb://mongodb:27017/dnd-currency-dev'); // Use 'mongodb' as hostname in Docker
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://mongodb:27017/dnd-currency-dev';
 
 // Initialize Express app
 const app = express();
@@ -80,31 +77,37 @@ if (ENV === 'development') {
   });
 }
 
-// Connect to MongoDB with environment-specific settings
+// Connect to MongoDB with improved settings
 console.log(`Running in ${ENV} mode`);
 console.log(`Connecting to database: ${MONGODB_URI}`);
 
 mongoose.connect(MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
-  // Increase timeouts to prevent connection issues
-  serverSelectionTimeoutMS: ENV === 'production' ? 5000 : 30000,
-  socketTimeoutMS: ENV === 'production' ? 45000 : 60000,
-  connectTimeoutMS: ENV === 'production' ? 10000 : 30000
+  serverSelectionTimeoutMS: 60000, // 1 minute timeout
+  socketTimeoutMS: 60000, // 1 minute timeout
+  connectTimeoutMS: 60000, // 1 minute timeout
+  heartbeatFrequencyMS: 1000, // Check connection more often
+  retryWrites: true,
+  retryReads: true,
 })
 .then(() => {
-  console.log('Successfully connected to MongoDB');
-  // Log the database name for confirmation
+  console.log('✅ Successfully connected to MongoDB');
   console.log(`Database: ${mongoose.connection.db.databaseName}`);
 })
 .catch(err => {
-  console.error('MongoDB connection error:', err);
+  console.error('❌ MongoDB connection error:', err);
   console.error('Please check your MongoDB URI and network settings.');
   
+  // Extra debugging info for development
   if (ENV === 'development') {
-    console.error('Ensure your MongoDB container is running:');
-    console.error('  docker ps | grep mongodb');
-    console.error('If not running: docker-compose up -d');
+    console.error('\nDebugging tips:');
+    console.error('1. Check if MongoDB container is running:');
+    console.error('   docker ps | grep mongodb');
+    console.error('2. Check MongoDB logs:');
+    console.error('   docker logs mongodb');
+    console.error('3. Try connecting to MongoDB manually:');
+    console.error('   docker exec -it dnd-currency-app mongo mongodb://mongodb:27017/dnd-currency-dev');
   }
 });
 

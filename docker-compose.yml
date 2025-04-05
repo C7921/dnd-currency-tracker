@@ -1,27 +1,47 @@
-version: '3'
+version: '3.8'
+
 services:
   app:
     container_name: dnd-currency-app
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
     volumes:
       - .:/projects/app/dnd-currency-tracker
       - /projects/app/dnd-currency-tracker/node_modules
     ports:
       - "8080:8080"
+      - "9229:9229" # For debugging
     environment:
       - NODE_ENV=development
       - PORT=8080
       - MONGODB_URI=mongodb://mongodb:27017/dnd-currency-dev
     depends_on:
       - mongodb
+    networks:
+      - dnd-network
+    command: npm run dev
 
   mongodb:
     container_name: mongodb
-    image: mongo:latest
+    image: mongo:6.0
     volumes:
       - mongodb_data:/data/db
+      # Add a MongoDB initialization script if needed
+      # - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
     ports:
       - "27017:27017"
+    networks:
+      - dnd-network
+    # Uncomment to set username/password (optional)
+    # environment:
+    #   - MONGO_INITDB_ROOT_USERNAME=root
+    #   - MONGO_INITDB_ROOT_PASSWORD=example
+
+networks:
+  dnd-network:
+    driver: bridge
 
 volumes:
   mongodb_data:
+    driver: local

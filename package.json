@@ -5,7 +5,8 @@
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
-    "dev": "nodemon app.js",
+    "dev": "nodemon --inspect=0.0.0.0:9229 app.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
     "docker:dev": "docker-compose up -d",
     "docker:logs": "docker-compose logs -f",
     "docker:stop": "docker-compose down",
