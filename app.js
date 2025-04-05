@@ -2,42 +2,58 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const path = require('path');
-const cors = require('cors');
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
 const characterRoutes = require('./routes/characters');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080; // Default to 8080 if PORT is not set
+console.log(`App configured to listen on port: ${PORT}`);
+console.log(`Environment PORT variable is: ${process.env.PORT}`);
+
+
+
+// Routes
+app.use('/api/characters', characterRoutes);
+
+// Add this function after your mongoose connection setup
+const isMongoConnected = () => {
+  return mongoose.connection.readyState === 1; // 1 = connected
+};
+
+// Add this route before other routes
+app.get('/health', (req, res) => {
+  console.log('Health check endpoint called');
+  
+  if (isMongoConnected()) {
+    console.log('Health check: MongoDB is connected');
+    return res.status(200).send({
+      status: 'ok',
+      message: 'Application is healthy',
+      mongodb: 'connected',
+      timestamp: new Date().toISOString()
+    });
+  }
+  
+  console.log('Health check: MongoDB is NOT connected');
+  return res.status(200).send({
+    status: 'warning',
+    message: 'Application is running but MongoDB is not connected',
+    mongodb: 'disconnected',
+    timestamp: new Date().toISOString()
+  });
+});
 
 // Middleware
-// Security middleware
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "https://cdnjs.cloudflare.com"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
-      fontSrc: ["'self'", "https://cdnjs.cloudflare.com"],
-      imgSrc: ["'self'", "data:"]
-    }
-  }
-}));
-app.use(cors({
-  origin: process.env.CORS_ORIGIN || '*'
-}));
-
-// API rate limiting
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later'
-});
-app.use('/api/', apiLimiter);
-
-// Body parser middleware
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Basic security headers without helmet
+app.use((req, res, next) => {
+  // Set security headers manually
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  next();
+});
 
 // MongoDB connection string - prioritizing environment variable
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/dnd-currency';
@@ -62,8 +78,14 @@ mongoose.connect(MONGODB_URI, {
   }
 });
 
-// Routes
-app.use('/api/characters', characterRoutes);
+app.use('*', (req, res) => {
+  console.log(`Received request at unexpected route: ${req.originalUrl}`);
+  res.status(200).send({
+    message: `Received request at ${req.originalUrl}`,
+    method: req.method,
+    timestamp: new Date().toISOString()
+  });
+});
 
 // Serve the main page
 app.get('/', (req, res) => {

@@ -8,8 +8,7 @@
   },
   "scripts": {
     "start": "node app.js",
-    "dev": "nodemon app.js",
-    "build": "npm install --production=false"
+    "dev": "nodemon app.js"
   },
   "keywords": [
     "dnd",
