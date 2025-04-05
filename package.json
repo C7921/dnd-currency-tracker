@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "A simple D&D 5e currency tracker",
   "main": "app.js",
+  "engines": {
+    "node": ">=14.0.0"
+  },
   "scripts": {
     "start": "node app.js",
     "dev": "nodemon app.js"
@@ -15,11 +18,14 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "body-parser": "^1.20.3",
-    "express": "^4.21.2",
-    "mongoose": "^6.13.8"
+    "express": "^4.17.1",
+    "body-parser": "^1.19.0",
+    "mongoose": "^6.0.12",
+    "cors": "^2.8.5",
+    "helmet": "^4.6.0",
+    "express-rate-limit": "^5.3.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.9"
+    "nodemon": "^2.0.14"
   }
 }
