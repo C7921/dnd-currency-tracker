@@ -1,0 +1,30 @@
+version: '3'
+services:
+  app:
+    container_name: dnd-currency-app
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      - .:/projects/app/dnd-currency-tracker
+      - /projects/app/dnd-currency-tracker/node_modules
+    ports:
+      - "8080:8080"
+    environment:
+      - NODE_ENV=development
+      - PORT=8080
+      - MONGODB_URI=mongodb://mongodb:27017/dnd-currency
+    depends_on:
+      - mongodb
+    command: npm run dev
+
+  mongodb:
+    container_name: mongodb
+    image: mongo:latest
+    volumes:
+      - mongodb_data:/data/db
+    ports:
+      - "27017:27017"
+
+volumes:
+  mongodb_data:
