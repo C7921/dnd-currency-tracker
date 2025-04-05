@@ -1,0 +1,16 @@
+# .do/deploy.template.yaml
+spec:
+  name: dnd-currency-tracker
+  services:
+  - name: web
+    http_port: 8080
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    health_check:
+      http_path: /
+    routes:
+    - path: /
+    source_dir: /
+    envs:
+    - key: PORT
+      value: "8080"
