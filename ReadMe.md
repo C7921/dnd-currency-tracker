@@ -213,6 +213,7 @@ If you encounter issues during deployment:
   * Add image upload functionality
   * Update database schema and API endpoints
   * Implement a character editing interface
+  * Import from dndbeyond, pdf or other character creator?
 
 ### Currency Conversion
 - **Checkpoint**: Add automatic conversion between coin types
@@ -221,6 +222,7 @@ If you encounter issues during deployment:
   * Add a conversion UI component
   * Implement an "optimize" button to convert to higher denominations
   * Update the currency display to show equivalent values
+  * Add the option to customise currency and/or change conversion rates
 
 ### Campaign Management
 - **Checkpoint**: Group characters into campaigns
