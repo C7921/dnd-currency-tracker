@@ -1,229 +1,118 @@
-document.addEventListener('DOMContentLoaded', () => {
-  console.log('DOM fully loaded, initializing application...');
-  
-  // DOM elements
-  const characterForm = document.getElementById('character-form');
-  const characterList = document.getElementById('character-list');
-  const characterTemplate = document.getElementById('character-template');
-  
-  // Fetch all characters
-  const fetchCharacters = async () => {
-    try {
-      const response = await fetch('/api/characters');
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error('Error fetching characters:', error);
-      return [];
-    }
-  };
-  
-  // Add a new character
-  const addCharacter = async (e) => {
-    e.preventDefault();
-    
-    console.log('Form submitted, preparing to add character');
-    
-    const nameInput = document.getElementById('name');
-    const platinumInput = document.getElementById('platinum');
-    const goldInput = document.getElementById('gold');
-    const electrumInput = document.getElementById('electrum');
-    const silverInput = document.getElementById('silver');
-    const copperInput = document.getElementById('copper');
-    
-    // Check if name is provided
-    if (!nameInput.value.trim()) {
-      alert('Please enter a character name');
-      return;
-    }
-    
-    const character = {
-      name: nameInput.value,
-      currency: {
-        platinum: parseInt(platinumInput.value) || 0,
-        gold: parseInt(goldInput.value) || 0,
-        electrum: parseInt(electrumInput.value) || 0,
-        silver: parseInt(silverInput.value) || 0,
-        copper: parseInt(copperInput.value) || 0
-      }
-    };
-    
-    console.log('Sending character data:', character);
-    
-    try {
-      const response = await fetch('/api/characters', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(character)
-      });
-      
-      console.log('Response status:', response.status);
-      
-      if (response.ok) {
-        console.log('Character added successfully');
-        // Reset form
-        characterForm.reset();
-        
-        // Refresh character list
-        displayCharacters();
-      } else {
-        const errorData = await response.json();
-        console.error('Error from server:', errorData);
-        alert(`Failed to add character: ${errorData.message}`);
-      }
-    } catch (error) {
-      console.error('Error adding character:', error);
-      alert('Failed to add character. Check console for details.');
-    }
-  };
-  
-  // Delete a character
-  const deleteCharacter = async (id) => {
-    try {
-      const response = await fetch(`/api/characters/${id}`, {
-        method: 'DELETE'
-      });
-      
-      if (response.ok) {
-        displayCharacters();
-      }
-    } catch (error) {
-      console.error('Error deleting character:', error);
-    }
-  };
-  
-  // Update character currency
-  const updateCurrency = async (id, currencyType, value) => {
-    try {
-      console.log(`Updating character ${id}, ${currencyType} to ${value}`);
-      const response = await fetch(`/api/characters/${id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          currency: {
-            [currencyType]: value
-          }
-        })
-      });
-      
-      if (response.ok) {
-        return await response.json();
-      } else {
-        console.error('Server returned error:', await response.text());
-        return null;
-      }
-    } catch (error) {
-      console.error('Error updating character:', error);
-      return null;
-    }
-  };
-  
-  // Display characters
-  const displayCharacters = async () => {
-    const characters = await fetchCharacters();
-    
-    // Clear character list
-    characterList.innerHTML = '';
-    
-    if (characters.length === 0) {
-      characterList.innerHTML = '<p>No characters found. Add a character to get started!</p>';
-      return;
-    }
-    
-    characters.forEach(character => {
-      const characterCard = characterTemplate.content.cloneNode(true);
-      
-      // Set character name
-      characterCard.querySelector('.character-name').textContent = character.name;
-      
-      // Set currency values
-      characterCard.querySelector('.platinum-value').textContent = character.currency.platinum;
-      characterCard.querySelector('.gold-value').textContent = character.currency.gold;
-      characterCard.querySelector('.electrum-value').textContent = character.currency.electrum;
-      characterCard.querySelector('.silver-value').textContent = character.currency.silver;
-      characterCard.querySelector('.copper-value').textContent = character.currency.copper;
-      
-      // Add event listener to delete button
-      characterCard.querySelector('.delete-btn').addEventListener('click', () => {
-        if (confirm(`Are you sure you want to delete ${character.name}?`)) {
-          deleteCharacter(character._id);
-        }
-      });
-      
-      // Add event listeners to currency buttons
-      const incrementButtons = characterCard.querySelectorAll('.increment-btn');
-      incrementButtons.forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          
-          const currencyType = btn.dataset.type;
-          const valueElement = btn.parentElement.querySelector(`.${currencyType}-value`);
-          if (!valueElement) {
-            console.error(`Could not find element with class ${currencyType}-value`);
-            // Try an alternative selector
-            const alternativeElement = characterCard.querySelector(`.${currencyType}-value`);
-            if (!alternativeElement) {
-              console.error('Alternative selector also failed');
-              return;
-            }
-            valueElement = alternativeElement;
-          }
-          
-          const currentValue = parseInt(valueElement.textContent) || 0;
-          const newValue = currentValue + 1;
-          
-          console.log(`Increment ${currencyType} from ${currentValue} to ${newValue}`);
-          
-          const updatedCharacter = await updateCurrency(character._id, currencyType, newValue);
-          if (updatedCharacter) {
-            valueElement.textContent = updatedCharacter.currency[currencyType];
-          }
-        });
-      });
-      
-      const decrementButtons = characterCard.querySelectorAll('.decrement-btn');
-      decrementButtons.forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          
-          const currencyType = btn.dataset.type;
-          const valueElement = btn.parentElement.querySelector(`.${currencyType}-value`);
-          if (!valueElement) {
-            console.error(`Could not find element with class ${currencyType}-value`);
-            // Try an alternative selector
-            const alternativeElement = characterCard.querySelector(`.${currencyType}-value`);
-            if (!alternativeElement) {
-              console.error('Alternative selector also failed');
-              return;
-            }
-            valueElement = alternativeElement;
-          }
-          
-          const currentValue = parseInt(valueElement.textContent) || 0;
-          const newValue = Math.max(0, currentValue - 1); // Prevent negative values
-          
-          console.log(`Decrement ${currencyType} from ${currentValue} to ${newValue}`);
-          
-          const updatedCharacter = await updateCurrency(character._id, currencyType, newValue);
-          if (updatedCharacter) {
-            valueElement.textContent = updatedCharacter.currency[currencyType];
-          }
-        });
-      });
-      
-      characterList.appendChild(characterCard);
-    });
-  };
-  
-  // Event listeners
-  characterForm.addEventListener('submit', addCharacter);
-  
-  // Initial display
-  displayCharacters();
+const express = require('express');
+const bodyParser = require('body-parser');
+const mongoose = require('mongoose');
+const path = require('path');
+const characterRoutes = require('./routes/characters');
+
+const app = express();
+const PORT = process.env.PORT || 8080;
+
+// Body parser middleware - ENSURE THESE COME BEFORE ROUTES
+// The order of middleware is important!
+app.use(express.json()); // Use Express's built-in JSON parser
+app.use(express.urlencoded({ extended: true })); // For parsing form data
+// Keep bodyParser for backward compatibility
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+// Static files middleware
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Basic security headers 
+app.use((req, res, next) => {
+  // Set security headers
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  next();
+});
+
+// Debug middleware to log request bodies
+app.use((req, res, next) => {
+  if (req.method === 'POST') {
+    console.log('DEBUG - Request URL:', req.url);
+    console.log('DEBUG - Request Headers:', req.headers);
+    console.log('DEBUG - Content-Type:', req.headers['content-type']);
+    console.log('DEBUG - Request Body:', req.body);
+  }
+  next();
+});
+
+// Health check endpoint for DigitalOcean
+app.get('/health', (req, res) => {
+  res.status(200).send('OK');
+});
+
+// MongoDB connection string - prioritizing environment variable
+const MONGODB_URI = process.env.MONGODB_URI;
+
+if (!MONGODB_URI) {
+  console.error('MONGODB_URI environment variable is not set!');
+  if (process.env.NODE_ENV !== 'production') {
+    // Only use localhost as a fallback in development
+    mongoose.connect('mongodb://localhost:27017/dnd-currency', {
+      useNewUrlParser: true,
+      useUnifiedTopology: true
+    })
+    .then(() => console.log('Connected to local MongoDB'))
+    .catch(err => console.error('Failed to connect to local MongoDB:', err));
+  } else {
+    console.error('No MongoDB connection string provided in production! Application will not function correctly.');
+  }
+} else {
+  console.log('Connecting to MongoDB using provided URI...');
+  // Connect using the environment variable
+  mongoose.connect(MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+    serverSelectionTimeoutMS: 5000
+  })
+  .then(() => {
+    console.log('Successfully connected to MongoDB');
+    // Mask the password in logs for security
+    const maskedUri = MONGODB_URI.replace(
+      /(mongodb(\+srv)?:\/\/[^:]+:)([^@]+)(@.+)/,
+      '$1*****$4'
+    );
+    console.log(`Connection string: ${maskedUri}`);
+  })
+  .catch(err => {
+    console.error('MongoDB connection error:', err);
+    console.error('Please check your MongoDB URI and network settings.');
+  });
+}
+
+// Routes
+app.use('/api/characters', characterRoutes);
+
+// Serve the main page
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Catch-all route to help debug unexpected requests
+app.use('*', (req, res) => {
+  console.log(`Received request at unexpected route: ${req.originalUrl}`);
+  res.status(200).send({
+    message: `Received request at ${req.originalUrl}`,
+    method: req.method,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Global error handler:', err.stack);
+  res.status(500).json({
+    message: 'Something went wrong!',
+    error: process.env.NODE_ENV === 'production' ? {} : err
+  });
+});
+
+// Start server
+app.listen(PORT, () => {
+  console.log(`PORT environment variable: ${process.env.PORT}`);
+  console.log(`App configured to listen on port: ${PORT}`);
+  console.log(`Environment PORT variable is: ${process.env.PORT}`);
+  console.log(`Server running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
 });

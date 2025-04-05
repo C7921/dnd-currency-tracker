@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Test Page</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    h1 {
+      color: #333;
+    }
+
+    .card {
+      border: 1px solid #ddd;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 5px;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+
+    input {
+      width: 100%;
+      padding: 8px;
+      box-sizing: border-box;
+    }
+
+    button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      cursor: pointer;
+    }
+
+    pre {
+      background: #f5f5f5;
+      padding: 10px;
+      border-radius: 5px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>API Test Page</h1>
+
+  <div class="card">
+    <h2>Add Character Test</h2>
+    <form id="test-form">
+      <div class="form-group">
+        <label for="test-name">Character Name:</label>
+        <input type="text" id="test-name" value="Test Character">
+      </div>
+      <div class="form-group">
+        <label for="test-gold">Gold:</label>
+        <input type="number" id="test-gold" value="10">
+      </div>
+      <button type="submit">Test Add Character</button>
+    </form>
+    <div id="test-result">
+      <h3>Result:</h3>
+      <pre id="result-data">No data yet</pre>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Fetch Characters Test</h2>
+    <button id="fetch-btn">Test Fetch Characters</button>
+    <div id="fetch-result">
+      <h3>Result:</h3>
+      <pre id="fetch-data">No data yet</pre>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('test-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const resultData = document.getElementById('result-data');
+
+      try {
+        resultData.textContent = 'Sending request...';
+
+        // Get form values
+        const name = document.getElementById('test-name').value;
+        const gold = parseInt(document.getElementById('test-gold').value) || 0;
+
+        // Create character data
+        const characterData = {
+          name: name,
+          currency: {
+            platinum: 0,
+            gold: gold,
+            electrum: 0,
+            silver: 0,
+            copper: 0
+          }
+        };
+
+        // Display what we're sending
+        resultData.textContent = 'Sending: ' + JSON.stringify(characterData, null, 2);
+
+        // Send request
+        const response = await fetch('/api/characters', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(characterData)
+        });
+
+        // Process response
+        const data = await response.json();
+        resultData.textContent = 'Status: ' + response.status + '\n\n' + JSON.stringify(data, null, 2);
+      } catch (error) {
+        resultData.textContent = 'Error: ' + error.message;
+      }
+    });
+
+    document.getElementById('fetch-btn').addEventListener('click', async () => {
+      const fetchData = document.getElementById('fetch-data');
+
+      try {
+        fetchData.textContent = 'Fetching...';
+
+        const response = await fetch('/api/characters');
+        const data = await response.json();
+
+        fetchData.textContent = 'Status: ' + response.status + '\n\n' + JSON.stringify(data, null, 2);
+      } catch (error) {
+        fetchData.textContent = 'Error: ' + error.message;
+      }
+    });
+  </script>
+</body>
+
+</html>
