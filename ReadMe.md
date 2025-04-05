@@ -23,7 +23,7 @@ A simple web application for tracking D&D 5e character currency. This app allows
 
 1. Clone the repository:
    ```
-   git clone https://github.com/yourusername/dnd-currency-tracker.git
+   git clone https://github.com/C7921/dnd-currency-tracker.git
    cd dnd-currency-tracker
    ```
 
