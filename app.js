@@ -1,5 +1,4 @@
 const express = require('express');
-const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const path = require('path');
 const characterRoutes = require('./routes/characters');
@@ -8,32 +7,34 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 
 // Body parser middleware - ENSURE THESE COME BEFORE ROUTES
-// The order of middleware is important!
-app.use(express.json()); // Use Express's built-in JSON parser
-app.use(express.urlencoded({ extended: true })); // For parsing form data
-// Keep bodyParser for backward compatibility
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+// Remove bodyParser package dependency - simplify to just Express built-in parsers
+app.use(express.json({ limit: '10mb' })); 
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Test endpoint to verify body parsing works
+app.post('/api/test', (req, res) => {
+  console.log('Test endpoint hit');
+  console.log('Received body:', req.body);
+  res.json({
+    message: 'Test successful',
+    receivedBody: req.body,
+    bodyEmpty: !req.body || Object.keys(req.body).length === 0
+  });
+});
 
 // Static files middleware
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Basic security headers 
+// Debug middleware to log all requests
 app.use((req, res, next) => {
-  // Set security headers
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('X-XSS-Protection', '1; mode=block');
-  next();
-});
-
-// Debug middleware to log request bodies
-app.use((req, res, next) => {
+  console.log(`${req.method} ${req.url}`);
+  
   if (req.method === 'POST') {
-    console.log('DEBUG - Request URL:', req.url);
-    console.log('DEBUG - Request Headers:', req.headers);
-    console.log('DEBUG - Content-Type:', req.headers['content-type']);
-    console.log('DEBUG - Request Body:', req.body);
+    console.log('Request headers:', {
+      'content-type': req.headers['content-type'],
+      'content-length': req.headers['content-length']
+    });
+    console.log('Request body (parsed):', req.body);
   }
   next();
 });
@@ -82,7 +83,7 @@ if (!MONGODB_URI) {
   });
 }
 
-// Routes
+// API Routes - IMPORTANT: Place after body parser middleware
 app.use('/api/characters', characterRoutes);
 
 // Serve the main page
@@ -111,8 +112,5 @@ app.use((err, req, res, next) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`PORT environment variable: ${process.env.PORT}`);
-  console.log(`App configured to listen on port: ${PORT}`);
-  console.log(`Environment PORT variable is: ${process.env.PORT}`);
   console.log(`Server running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
 });

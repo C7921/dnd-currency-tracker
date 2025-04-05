@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Test Page</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    h1,
+    h2 {
+      color: #333;
+    }
+
+    .test-section {
+      margin-bottom: 30px;
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+
+    button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      margin: 10px 0;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    pre {
+      background-color: #f5f5f5;
+      padding: 10px;
+      border-radius: 4px;
+      white-space: pre-wrap;
+      overflow-x: auto;
+    }
+
+    .input-field {
+      margin-bottom: 10px;
+    }
+
+    .input-field label {
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    .input-field input {
+      width: 100%;
+      padding: 8px;
+      box-sizing: border-box;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>D&D Currency Tracker API Test</h1>
+
+  <div class="test-section">
+    <h2>1. Test Basic API Connection</h2>
+    <button id="test-api">Test API Connection</button>
+    <pre id="test-result">Results will appear here...</pre>
+  </div>
+
+  <div class="test-section">
+    <h2>2. Create a Character</h2>
+    <div class="input-field">
+      <label for="character-name">Character Name:</label>
+      <input type="text" id="character-name" value="Test Character">
+    </div>
+    <div class="input-field">
+      <label for="gold-amount">Gold Amount:</label>
+      <input type="number" id="gold-amount" value="10">
+    </div>
+    <button id="create-character">Create Character</button>
+    <pre id="create-result">Results will appear here...</pre>
+  </div>
+
+  <div class="test-section">
+    <h2>3. Fetch All Characters</h2>
+    <button id="fetch-characters">Fetch Characters</button>
+    <pre id="fetch-result">Results will appear here...</pre>
+  </div>
+
+  <script>
+    // Test API connection
+    document.getElementById('test-api').addEventListener('click', async () => {
+      const resultElement = document.getElementById('test-result');
+      resultElement.textContent = 'Testing API connection...';
+
+      try {
+        const response = await fetch('/api/test', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ test: true, timestamp: new Date().toISOString() })
+        });
+
+        const data = await response.json();
+        resultElement.textContent = JSON.stringify(data, null, 2);
+      } catch (error) {
+        resultElement.textContent = `Error: ${error.message}`;
+      }
+    });
+
+    // Create a character
+    document.getElementById('create-character').addEventListener('click', async () => {
+      const resultElement = document.getElementById('create-result');
+      resultElement.textContent = 'Creating character...';
+
+      const name = document.getElementById('character-name').value;
+      const gold = parseInt(document.getElementById('gold-amount').value) || 0;
+
+      const characterData = {
+        name: name,
+        currency: {
+          platinum: 0,
+          gold: gold,
+          electrum: 0,
+          silver: 0,
+          copper: 0
+        }
+      };
+
+      try {
+        // Display what we're sending
+        resultElement.textContent = `Sending: ${JSON.stringify(characterData, null, 2)}`;
+
+        const response = await fetch('/api/characters', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(characterData)
+        });
+
+        const responseText = await response.text();
+        let data;
+
+        try {
+          data = JSON.parse(responseText);
+          resultElement.textContent = `Status: ${response.status}\n\n${JSON.stringify(data, null, 2)}`;
+        } catch (parseError) {
+          resultElement.textContent = `Status: ${response.status}\n\nRaw response (not JSON):\n${responseText}`;
+        }
+      } catch (error) {
+        resultElement.textContent = `Network Error: ${error.message}`;
+      }
+    });
+
+    // Fetch all characters
+    document.getElementById('fetch-characters').addEventListener('click', async () => {
+      const resultElement = document.getElementById('fetch-result');
+      resultElement.textContent = 'Fetching characters...';
+
+      try {
+        const response = await fetch('/api/characters');
+        const data = await response.json();
+        resultElement.textContent = JSON.stringify(data, null, 2);
+      } catch (error) {
+        resultElement.textContent = `Error: ${error.message}`;
+      }
+    });
+  </script>
+</body>
+
+</html>
